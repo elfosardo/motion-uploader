@@ -45,7 +45,8 @@ class MotionUploader:
         self.snapshot_folder = config.get('docs', 'snapshot-folder')
         
         # Options
-        self.delete_after_upload = config.getboolean('options', 'delete-after-upload')
+        self.delete_video_after_upload = config.getboolean('options', 'delete-video-after-upload')
+        self.delete_snap_after_upload = config.getboolean('options', 'delete-snap-after-upload')
         self.send_email = config.getboolean('options', 'send-email')
         
         self._create_drive()
@@ -122,7 +123,7 @@ class MotionUploader:
                 msg += '\n\n' + video_link                
             self._send_email(msg)    
  
-        if self.delete_after_upload:
+        if self.delete_video_after_upload:
             os.remove(video_file_path)    
     
     def upload_snapshot(self, snapshot_file_path):
@@ -137,7 +138,10 @@ class MotionUploader:
                 self.drive_service.files().delete(fileId=file_id).execute()
         #Now upload the new one
         media = MediaFileUpload(snapshot_file_path, mimetype='image/jpeg')
-        self.drive_service.files().insert(media_body=media, body={'title':file_name, 'parents':[{u'id': folder_id}]}).execute()          
+        self.drive_service.files().insert(media_body=media, body={'title':file_name, 'parents':[{u'id': folder_id}]}).execute()
+
+        if self.delete_snap_after_upload:
+            os.remove(snapshot_file_path)
                       
     def get_snapshot_url(self, snapshot_file_path):
         """Print out the public url for this snapshot."""
