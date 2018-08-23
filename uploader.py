@@ -109,9 +109,22 @@ class MotionUploader:
         server.quit()    
     
     def upload_video(self, video_file_path):
-        """Upload a video to the specified folder. Then optionally send an email and optionally delete the local file."""
+        """Upload a video to the specified folder.
+        Remove duplicates.
+        Optionally send an email.
+        Optionally delete the local file."""
+
         folder_id = self._get_folder_id(self.folder)
-        
+        file_name = os.path.basename(video_file_path)
+
+        # Delete duplicate video
+        files = self.drive_service.files().list(q="title='%s' and '%s' in parents and trashed=false" % (file_name, folder_id)).execute()
+        if len(files['items']) >= 1:
+            for f in files['items']:
+                file_id = f['id']
+                self.drive_service.files().delete(fileId=file_id).execute()
+
+        # Now upload the new one
         media = MediaFileUpload(video_file_path, mimetype='video/avi')
         response = self.drive_service.files().insert(media_body=media, body={'title':os.path.basename(video_file_path), 'parents':[{u'id': folder_id}]}).execute()
         #print response
@@ -127,16 +140,21 @@ class MotionUploader:
             os.remove(video_file_path)    
     
     def upload_snapshot(self, snapshot_file_path):
-        """Upload a snapshot to the specified folder. Remove duplicates."""
+        """Upload a snapshot to the specified folder.
+        Remove duplicates.
+        Optionally delete the local file."""
+
         folder_id = self._get_folder_id(self.snapshot_folder)
         file_name = os.path.basename(snapshot_file_path)
-        #Delete the old snapshot
+
+        # Delete the old snapshot
         files = self.drive_service.files().list(q="title='%s' and '%s' in parents and trashed=false" % (file_name, folder_id)).execute()
         if len(files['items']) >= 1:
             for f in files['items']:
                 file_id = f['id']
                 self.drive_service.files().delete(fileId=file_id).execute()
-        #Now upload the new one
+
+        # Now upload the new one
         media = MediaFileUpload(snapshot_file_path, mimetype='image/jpeg')
         self.drive_service.files().insert(media_body=media, body={'title':file_name, 'parents':[{u'id': folder_id}]}).execute()
 
